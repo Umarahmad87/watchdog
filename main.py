@@ -1,7 +1,9 @@
 import os
 import sys
 import time
+import datetime
 from watchdog.observers.polling import PollingObserver as Observer
+
 
 from watchdog.events import FileSystemEventHandler
 
@@ -34,11 +36,15 @@ class MonitorFolder(FileSystemEventHandler):
             time.sleep(self.WAIT_TIME)
             last_status, time_ = self.get_status(event.src_path)
 
-        if 'should restart' in last_status:
-            os.system('./script.sh')
+        if 'should restart' in last_status or '0' == last_status:
+            os.system(script_file_path)
             print(f'Restarting status:{last_status}')
         else:
             print(f'{time_} status:{last_status}')
+        
+        with open(output_file_path) as f:
+            f.write(f'Monitoring: {last_status} {time_} {datetime.datetime.utcnow().isoformat()}\n')
+
 
     def get_status(self, path):
         appended_data = read_last_n_lines_from_file(path, 1)
@@ -53,10 +59,14 @@ class MonitorFolder(FileSystemEventHandler):
         self.on_change(event)
 
 
-if __name__ == "__main__":
-    src_path = sys.argv[1]
-    print(src_path)
+src_path = sys.argv[1]
+script_file_path = sys.argv[2] # './script.sh'
+output_file_path = sys.argv[3]
 
+
+if __name__ == "__main__":
+
+    print(src_path)
     event_handler = MonitorFolder()
     observer = Observer()
     observer.schedule(event_handler, path=src_path, recursive=False)
